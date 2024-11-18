@@ -7,6 +7,6 @@
 </head>
 <body>
     <h1>Hello, Laravel!</h1>
-    <p>Welcome to your Laravel app!</p>
+    <p>Welcome to your Laravel app!scale</p>
 </body>
 </html>
