@@ -3,10 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello Laravel</title>
+    <link rel="icon" href="/bag.ico" type="image/x-icon">
+    <!-- <link rel="stylesheet" href="{{ asset('css/signin.css') }}"> -->
+
+    <link rel="stylesheet" href="/css/signin.css">
+    <title>Sign In</title>
 </head>
 <body>
-    <h1>Hello, Laravel!</h1>
-    <p>Welcome to your Laravel app!scale</p>
+  <div class="wrapper">
+    <form action="#">
+      <h2>Login</h2>
+        <div class="input-field">
+        <input type="text" required>
+        <label>Enter your username</label>
+      </div>
+      <div class="input-field">
+        <input type="password" required>
+        <label>Enter your password</label>
+      </div>
+      <div class="forget">
+        <label for="remember">
+          <input type="checkbox" id="remember">
+          <p>Remember me</p>
+        </label>
+        <!-- <a href="#">Forgot password?</a> -->
+      </div>
+      <button type="submit">Log In</button>
+      <div class="register">
+        <!-- <p>Don't have an account? <a href="#">Register</a></p> -->
+      </div>
+    </form>
+  </div>
 </body>
 </html>
