@@ -1,0 +1,55 @@
+name: Deploy Laravel to Server
+
+on:
+  push:
+    branches:
+      - main  # This deploys on pushes to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    # Set up PHP (make sure this matches the version your Laravel project uses)
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'  # Change to your preferred PHP version
+        extensions: mbstring, bcmath, exif, gd, curl, zip
+
+    # Install dependencies
+    - name: Install Composer dependencies
+      run: |
+        composer install --no-interaction --prefer-dist --optimize-autoloader
+
+    # Set environment variables (you can add these in GitHub Secrets for security)
+    - name: Set up .env for production
+      run: |
+        cp .env.example .env
+
+    # Run database migrations if needed
+    - name: Run database migrations
+      run: |
+        php artisan migrate --force
+
+    # Clear and cache configurations
+    - name: Cache Config and Routes
+      run: |
+        php artisan config:cache
+        php artisan route:cache
+        php artisan view:cache
+
+    # Deploy to your server
+    - name: Deploy to server via SSH
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H your-server-ip >> ~/.ssh/known_hosts
+        ssh user@your-server-ip "cd /path/to/your/laravel/project && git pull origin main && composer install --no-dev && php artisan migrate --force"
