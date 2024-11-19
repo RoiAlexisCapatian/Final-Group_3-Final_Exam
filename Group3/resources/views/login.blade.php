@@ -78,7 +78,7 @@
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('There was error with the login process.');
+        alert('There was an error with the login process.');
       });
     });
   </script>
