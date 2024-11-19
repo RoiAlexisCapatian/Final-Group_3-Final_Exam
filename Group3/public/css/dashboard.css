@@ -214,6 +214,14 @@ main {
     display: inline-block;
     margin-right: 0.5rem; 
 }
+.certifications{position: relative;}
+.certifications p::before {
+    content: "•"; 
+    color: black; 
+    font-size: 1.2rem;
+    display: inline-block;
+    margin-right: 0.5rem; 
+}
 .paper p{margin: 0px 0px 10px 0px;text-align: justify; padding: 5px;}
 
 .bold{font-weight: bold;text-align: justify;font-size: 13px;}
