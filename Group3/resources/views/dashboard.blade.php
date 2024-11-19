@@ -102,7 +102,7 @@
 
                 <span class="add-skill" style="display:none;">[+]</span>
                 <span class="remove-skill" style="display:none;">[-]</span>
-                </div
+</div>
             <div style="width: 100%;  border: 1px solid;"></div>
             <h3 class="header3">CERTIFICATIONS</h3>
             <p>UX & UI Design Certificate - Noble Desktop's Online Bootcamp - 2023</p>
