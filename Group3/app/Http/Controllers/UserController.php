@@ -157,69 +157,142 @@ class UserController extends Controller
 
 
 
-    public function updateUser(Request $request)
-    {
-        // Validate incoming request
-        $validated = $request->validate([
-            'userid' => 'required|integer',
-            'fullname' => 'required|string|max:255',
-            'address' => 'nullable|string|max:255',
-            'birthdate' => 'nullable|string|max:255',
-            'phone' => 'nullable|string|max:11',
-            'email' => 'nullable|string|email|max:255',
-            'objective' => 'nullable|string|max:255',
-            'professional_skills' => 'nullable|array',
-            'certifications' => 'nullable|array',
-            'skills' => 'nullable|array',
-            'education' => 'nullable|array',
-            'work_history' => 'nullable|array',
-        ]);
-    
-        // Get user data
-        $userid = $validated['userid'];
-        $fullname = $validated['fullname'];
-        $address  = $validated['address'];
-        $birthdate  = $validated['birthdate'];
-        $phone  = $validated['phone'];
-        $email  = $validated['email'];
-        $objective = $validated['objective'];
-        $professionalSkills = $validated['professional_skills']; 
-        $certifications=$validated['certifications'];
-        $skills=$validated['skills'];
-        $education=$validated['education'];
-        $work_history=$validated['work_history'];
-    
-        // Save the new fullname (assuming you want to save it to the resume table)
-        $user = DB::table('resume')
-                    ->where('userid', $userid)
-                    ->first();
-    
-        if ($user) {
-            // Update the user's fullname in the resume table
-            DB::table('resume')
+public function updateUser(Request $request)
+{
+    // Validate incoming request
+    $validated = $request->validate([
+        'userid' => 'required|integer',
+        'fullname' => 'required|string|max:255',
+        'address' => 'nullable|string|max:255',
+        'birthdate' => 'nullable|string|max:255',
+        'phone' => 'nullable|string|max:11',
+        'email' => 'nullable|string|email|max:255',
+        'objective' => 'nullable|string|max:255',
+        'professional_skills' => 'nullable|array',
+        'certifications' => 'nullable|array',
+        'skills' => 'nullable|array',
+        'education' => 'nullable|array',
+        'work_history' => 'nullable|array',
+    ]);
+
+    // Get user data
+    $userid = $validated['userid'];
+    $fullname = $validated['fullname'];
+    $address  = $validated['address'];
+    $birthdate  = $validated['birthdate'];
+    $phone  = $validated['phone'];
+    $email  = $validated['email'];
+    $objective = $validated['objective'];
+    $professionalSkills = $validated['professional_skills']; 
+    $certifications=$validated['certifications'];
+    $skills=$validated['skills'];
+    $education=$validated['education'];
+    $work_history=$validated['work_history'];
+
+    // Save the new fullname (assuming you want to save it to the resume table)
+    $user = DB::table('resume')
                 ->where('userid', $userid)
-                ->update([
-                'fullname' => $fullname,
-                'address' => $address,
-                'birthdate' => $birthdate,
-                'phone' => $phone,
-                'email' => $email,
-                'objective' => $objective,
-                'professional_skills' => json_encode($professionalSkills),
-                'certifications' => json_encode($certifications),
-                'skills' => json_encode($skills),
-                'education' => json_encode($education),
-                'work_history' => json_encode($work_history),
-            ]);
-                
-    
-            // Return a success message
-            return response()->json(['success' => true, 'message' => 'User updated successfully']);
-        }
-    
-        return response()->json(['success' => false, 'message' => 'User not found']);
+                ->first();
+
+    if ($user) {
+        // Update the user's fullname in the resume table
+        DB::table('resume')
+            ->where('userid', $userid)
+            ->update([
+            'fullname' => $fullname,
+            'address' => $address,
+            'birthdate' => $birthdate,
+            'phone' => $phone,
+            'email' => $email,
+            'objective' => $objective,
+            'professional_skills' => json_encode($professionalSkills),
+            'certifications' => json_encode($certifications),
+            'skills' => json_encode($skills),
+            'education' => json_encode($education),
+            'work_history' => json_encode($work_history),
+        ]);
+            
+
+        // Return a success message
+        return response()->json(['success' => true, 'message' => 'User updated successfully']);
     }
+
+    return response()->json(['success' => false, 'message' => 'User not found']);
+}
+
+
     
+
+
+
+    public function getUserPicture($userid)
+{
+    // Fetch user data from the users table
+    $user = DB::table('users')->where('userid', $userid)->first();
+
+    // Check if the picture field is null or empty
+    if ($user && !empty($user->picture)) {
+        return response()->json([
+            'picture' => asset('images/users/' . $user->picture)
+        ]);
+    }
+
+    // Return the default picture if no user picture exists
+    return response()->json([
+        'picture' => asset('images/default_icon.png')
+    ]);
+}
+
+
+
+public function updateUserPicture(Request $request)
+{
+    try {
+        // Validate the request
+        $request->validate([
+            'userid' => 'required|exists:users,userid', // Ensure userid exists in users table
+            'picture' => 'required|image|mimes:jpeg,png,jpg|max:2048', // Validate image
+        ]);
+
+        $userId = $request->input('userid');
+        $file = $request->file('picture');
+
+        // Log the received user ID for debugging
+        \Log::info('The user ID received: ' . $userId);
+
+        // Get the original filename
+        $originalFileName = $file->getClientOriginalName();
+        
+        // Get the file extension
+        $extension = $file->getClientOriginalExtension();
+        
+        // Generate a unique file name by appending a unique ID to the original filename
+        $fileName = pathinfo($originalFileName, PATHINFO_FILENAME) . '-' . uniqid() . '.' . $extension;
+
+        // Path to save the file in 'public/images/users/' directory
+        $filePath = public_path('images/users/' . $fileName);
+        
+        // Store the image in the "public/images/users" directory
+        $file->move(public_path('images/users'), $fileName);
+
+        // Update the user's picture in the database with only the filename
+        DB::table('users')
+            ->where('userid', $userId)
+            ->update(['picture' => $fileName]);
+
+        // Return a success response
+        return response()->json(['success' => true, 'picture' => asset('images/users/' . $fileName)]);
+    } catch (\Exception $e) {
+        // Log the exception message for debugging
+        \Log::error('Error updating user picture: ', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+
+        return response()->json(['success' => false, 'message' => 'An error occurred. Please try again later.'], 500);
+    }
+}
+
+
+
+
 
 }
 

@@ -31,7 +31,7 @@
                 <tr class="resume_row">
                     <td class="userid_td">{{ $admin->userid }}</td>
                     <td class="picture_td">
-                        <img src="{{ asset($admin->picture ? 'storage/' . $admin->picture : 'images/default_icon.png') }}" alt="user image" width="50px" height="50px">
+                    <img src="{{ asset($admin->picture ? 'images/users/' . $admin->picture : 'images/default_icon.png') }}" alt="user image" width="50px" height="50px">
                     </td>
                     <td class="username_td">{{ $admin->username ?? 'N/A' }}</td>
                     <td class="usertype_td">{{ $admin->usertype }}</td>
@@ -104,7 +104,87 @@
             <div class="certifications"></div>
         </div>
         <div class="col_2">
-            <img style="width: 200px; border: 1px solid; align-self: center;" src="{{ asset('images/users/reign.jpg') }}"  alt="Image">
+            <!-- PROFIEL -->
+            <div style="position: relative;align-self: center;width: fit-content;">
+    <!-- User picture with default icon -->
+    <img id="userPicture" style="width: 200px; height:200px;border: 1px solid; align-self: center;" src="{{ asset('images/default_icon.png') }}" alt="Image">
+    
+<!-- Camera icon container -->
+<div id="camera_container" style="display:none; position: absolute; bottom: -15px; right: -15px; transition: transform 0.3s ease-in-out;" 
+         onmouseover="this.style.transform='scale(1.2)'" 
+         onmouseout="this.style.transform='scale(1)'">
+        <label for="fileInput" style="cursor: pointer; border-radius: 50%; overflow: hidden; display: inline-block;">
+            <img src="{{ asset('images/camera.png') }}" 
+                 style="width: 40px; height: 40px; border-radius: 50%; background: white; border: 2px solid; padding: 5px;" 
+                 alt="Camera">
+        </label>
+        <!-- Hidden file input for uploading image -->
+        <input type="file" id="fileInput" style="display: none;" accept="image/png, image/jpeg">
+    </div>
+<script>
+
+    // Function to update the image preview
+    function updateImagePreview(fileInputId, imgElementId) {
+        const fileInput = document.getElementById(fileInputId);
+        const imgElement = document.getElementById(imgElementId);
+        const file = fileInput.files[0]; // Get the selected file
+
+        // Check if a file was selected and it's an image
+        if (file && (file.type === 'image/png' || file.type === 'image/jpeg')) {
+            const reader = new FileReader(); // Create a FileReader to read the file
+
+            reader.onload = function(e) {
+                imgElement.src = e.target.result; // Set the image src to the file's content
+                console.log('Preview updated:', file.name); // Log the file name for debugging
+            };
+
+            reader.readAsDataURL(file); // Read the file as a data URL
+        } else {
+            console.error('Please select a valid image file (PNG or JPG).');
+        }
+    }
+
+    // Function to send the file to the server
+    async function updateUserPicture(fileInput) {
+    const formData = new FormData();
+    formData.append('userid', document.getElementById('userid').value); // Get the actual user ID from the hidden input field
+    formData.append('picture', fileInput.files[0]); // Append the selected file
+
+    try {
+        const response = await fetch('/update-user-picture', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Picture updated successfully:', result);
+            alert('Picture updated successfully!');
+        } else {
+            const result = await response.json();
+            console.error('Failed to update picture:', result.message);
+            alert('Failed to update picture. Please try again. The user ID received: ' + result.userId);
+        }
+    } catch (error) {
+        console.error('Error updating picture:', error);
+        alert('An error occurred. Please try again.');
+    }
+}
+
+
+    // Attach the change event to the file input
+    document.getElementById('fileInput').addEventListener('change', function() {
+        updateImagePreview('fileInput', 'userPicture');
+        updateUserPicture(this);
+    });    
+</script>    
+</div>
+
+            <!--  -->
+
             <br>
             <h3 class="header3 margin">CONTACT</h3>
             <span class="contact bold">Address:&nbsp;&nbsp;<p id="address" contenteditable="false" style="white-space: nowrap;"></p></span>
@@ -171,10 +251,10 @@
 
     // Set the userid in the hidden input field
     useridField.value = userid; // Dynamically set the hidden input value
-
+    
     // Log the userid to make sure it's correct
     console.log(`showModal called with userid: ${userid}`);
-
+    fetchUserPicture();
     // Fetch user data from the server
     fetch(`/get-user/${userid}`)
         .then(response => response.json())
@@ -285,6 +365,7 @@ function enableEdit() {
     editSkills();
     editEducation();
     editWorkHistory();
+    editCamera();
 
     // Disable the edit button to prevent multiple activations
     const editButton = document.querySelector('.edit-button');
@@ -304,7 +385,7 @@ function editFields() {
     const emailElement = document.getElementById('email');
 
     // Enable editing for each field and apply visual indicators
-    const fields = [fullnameElement, addressElement, birthdateElement, phoneElement, emailElement];
+    const fields = [ addressElement, birthdateElement, phoneElement, emailElement,fullnameElement];
 
     fields.forEach(element => {
         if (element) {
@@ -315,6 +396,14 @@ function editFields() {
             console.error(`Element not found: ${element.id}`);
         }
     });
+
+     // Show the camera container (set display to block)
+     const cameraContainer = document.getElementById('camera_container');
+    if (cameraContainer) {
+        cameraContainer.style.display = 'block'; // Make camera container visible
+    } else {
+        console.error('Camera container not found.');
+    }
 }
 
 
@@ -795,6 +884,7 @@ function saveChanges() {
     const birthdateElement = document.getElementById('birthdate');
     const phoneElement = document.getElementById('phone');
     const emailElement = document.getElementById('email');
+    const pictureElement = document.getElementById('camera_container')
 
 
     const objectiveElement = document.getElementById('objective');
@@ -891,6 +981,8 @@ function saveChanges() {
                 phoneElement.contentEditable = false;
                 emailElement.contentEditable = false;
                 objectiveElement.contentEditable = false;
+                pictureElement.style.display = 'none';
+
                 fullnameElement.style.border = '';
                 objectiveElement.style.border = '';
                 addressElement.style.border = '';
@@ -900,9 +992,9 @@ function saveChanges() {
 
                 // Make professional skills non-editable
                 const professionalSkillElements = professionalSkillsContainer.querySelectorAll('p');
-                professionalSkillElements.forEach(skill => {
-                    skill.contentEditable = false;
-                    skill.style.border = ''; // Reset the border style
+                professionalSkillElements.forEach(professional_skills => {
+                    professional_skills.contentEditable = false;
+                    professional_skills.style.border = ''; // Reset the border style
                 });
                 
                 // Make certifications non-editable
@@ -945,7 +1037,7 @@ function saveChanges() {
 
                 // Remove the [+] and [-] buttons for both skills and certifications
                 const addProfessionalSkillButton = document.querySelector('.add-professional-skill');
-                const removeProfessionalSkillButton = document.querySelector('.remove-professioal-skill');
+                const removeProfessionalSkillButton = document.querySelector('.remove-professional-skill');
                 if (addProfessionalSkillButton) {
                     addProfessionalSkillButton.remove(); // Remove the [+] button for skills
                 }
@@ -989,6 +1081,9 @@ function saveChanges() {
                 if (addWorkButton) {
                     addWorkButton.remove(); // Remove the [+] button for work history
                 }
+                if (removeWorkButton){
+                    removeWorkButton.remove();
+                }
                 
             } else {
                 showOutputMessage(response.message || 'Failed to save changes.', true);
@@ -1005,6 +1100,50 @@ function saveChanges() {
 
     // Send the data as a JSON string
     xhr.send(JSON.stringify(data));
+}
+
+
+
+
+
+
+
+
+
+
+
+function fetchUserPicture() {
+    const pictureElement = document.getElementById('userPicture');
+    const userid = document.getElementById('userid').value; // Get the user ID from the hidden input field
+
+    // Ensure userid is not empty
+    if (!userid) {
+        console.error('User ID is missing.');
+        return;
+    } else {
+        console.log('User ID:', userid);
+    }
+
+    // Send an AJAX request to get the user's picture
+    fetch(`/get-user-picture/${userid}`)
+        .then(response => response.json())
+        .then(data => {
+            const pictureSrc = data.picture || "{{ asset('images/default_icon.png') }}"; // Use user picture if available, else default
+
+            // Log whether the picture value exists for the given user
+            if (data.picture) {
+                console.log('User has a picture:', data.picture); // Log the picture path
+            } else {
+                console.log('No picture found for this user, using default.');
+            }
+
+            console.log('Using picture:', pictureSrc); // Log the picture being used
+
+            pictureElement.src = pictureSrc; // Set the image source
+        })
+        .catch(error => {
+            console.error('Error fetching picture:', error);
+        });
 }
 
 
@@ -1049,12 +1188,144 @@ function closeModal() {
 
     // Close the modal
     modal.style.display = 'none';
-    
+
     // Clear the output message content
     if (outputMessage) {
         outputMessage.textContent = ''; // Clear the text content of the output message element
     }
+
+    // Reset the contentEditable and borders of elements
+    const fullnameElement = document.getElementById('fullname');
+    const addressElement = document.getElementById('address');
+    const birthdateElement = document.getElementById('birthdate');
+    const phoneElement = document.getElementById('phone');
+    const emailElement = document.getElementById('email');
+    const objectiveElement = document.getElementById('objective');
+    const pictureElement = document.getElementById('camera_container'); // Assuming this is the element for the camera
+
+    // Reset contentEditable to false and borders
+    fullnameElement.contentEditable = false;
+    addressElement.contentEditable = false;
+    birthdateElement.contentEditable = false;
+    phoneElement.contentEditable = false;
+    emailElement.contentEditable = false;
+    objectiveElement.contentEditable = false;
+    
+    // Reset border styles
+    fullnameElement.style.border = '';
+    objectiveElement.style.border = '';
+    addressElement.style.border = '';
+    birthdateElement.style.border = '';
+    phoneElement.style.border = '';
+    emailElement.style.border = '';
+
+    // Hide the camera container (similar to saveChanges function)
+    if (pictureElement) {
+        pictureElement.style.display = 'none'; // Hide the camera container when modal is closed
+    }
+
+    // Reset professional skills, certifications, skills, education, and work history sections
+    const professionalSkillsContainer = document.querySelector('.professional_skills');
+    const certificationsContainer = document.querySelector('.certifications');
+    const skillsContainer = document.querySelector('.skills');
+    const educationContainer = document.querySelector('.education');
+    const workHistoryContainer = document.querySelector('.work_history');
+
+    // Make professional skills non-editable and reset border styles
+    const professionalSkillElements = professionalSkillsContainer.querySelectorAll('p');
+    professionalSkillElements.forEach(professional_skill => {
+        professional_skill.contentEditable = false;
+        professional_skill.style.border = ''; // Reset the border style
+    });
+
+    // Make certifications non-editable and reset border styles
+    const certificationElements = certificationsContainer.querySelectorAll('p');
+    certificationElements.forEach(certification => {
+        certification.contentEditable = false;
+        certification.style.border = ''; // Reset the border style
+    });
+
+    // Make skills non-editable and reset border styles
+    const skillElements = skillsContainer.querySelectorAll('p');
+    skillElements.forEach(skill => {
+        skill.contentEditable = false;
+        skill.style.border = ''; // Reset the border style
+    });
+
+    // Make education non-editable and reset border styles
+    const educationElements = educationContainer.querySelectorAll('p');
+    educationElements.forEach(education => {
+        education.contentEditable = false;
+        education.style.border = ''; // Reset the border style
+    });
+
+    // Make work history non-editable and reset border styles
+    const workElements = workHistoryContainer.querySelectorAll('p');
+    workElements.forEach(work => {
+        work.contentEditable = false;
+        work.style.border = ''; // Reset the border style
+    });
+
+    // Disable save button and enable edit button
+    const saveButton = document.getElementById('saveButton');
+    saveButton.disabled = true;
+
+    const editButton = document.querySelector('.edit-button');
+    if (editButton) {
+        editButton.disabled = false; // Enable the edit button again
+    }
+
+    // Remove the [+] and [-] buttons for both skills and certifications
+    const addProfessionalSkillButton = document.querySelector('.add-professional-skill');
+    const removeProfessionalSkillButton = document.querySelector('.remove-professional-skill');
+    if (addProfessionalSkillButton) {
+        addProfessionalSkillButton.remove(); // Remove the [+] button for skills
+    }
+    if (removeProfessionalSkillButton) {
+        removeProfessionalSkillButton.remove(); // Remove the [-] button for skills
+    }
+
+    // For certifications: remove the [+] and [-] buttons
+    const addCertificationButton = document.querySelector('.add-certification');
+    const removeCertificationButton = document.querySelector('.remove-certification');
+    if (addCertificationButton) {
+        addCertificationButton.remove(); // Remove the [+] button for certifications
+    }
+    if (removeCertificationButton) {
+        removeCertificationButton.remove(); // Remove the [-] button for certifications
+    }
+
+    // For skills: remove the [+] and [-] buttons
+    const addSkillButton = document.querySelector('.add-skill');
+    const removeSkillButton = document.querySelector('.remove-skill');
+    if (addSkillButton) {
+        addSkillButton.remove(); // Remove the [+] button for skills
+    }
+    if (removeSkillButton) {
+        removeSkillButton.remove(); // Remove the [-] button for skills
+    }
+
+    // For education: remove the [+] and [-] buttons
+    const addEducationButton = document.querySelector('.add-education');
+    const removeEducationButton = document.querySelector('.remove-education');
+    if (addEducationButton) {
+        addEducationButton.remove(); // Remove the [+] button for education
+    }
+    if (removeEducationButton) {
+        removeEducationButton.remove(); // Remove the [-] button for education
+    }
+
+    // For work history: remove the [+] and [-] buttons
+    const addWorkButton = document.querySelector('.add-work');
+    const removeWorkButton = document.querySelector('.remove-work');
+    if (addWorkButton) {
+        addWorkButton.remove(); // Remove the [+] button for work history
+    }
+    if (removeWorkButton) {
+        removeWorkButton.remove(); // Remove the [-] button for work history
+    }
 }
+
 
 
 

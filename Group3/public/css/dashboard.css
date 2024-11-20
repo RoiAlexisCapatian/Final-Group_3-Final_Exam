@@ -237,3 +237,16 @@ main {
 }
 
 .paper .margin{margin:20px 0px 20px 0px}
+
+.camera-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid;
+  padding: 5px;
+  transition: transform 0.3s ease-in-out;
+}
+.camera-icon:hover {
+  transform: scale(1.2);
+}
