@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    
 
     <link rel="icon" href="/bag.ico" type="image/x-icon">
     <link rel="stylesheet" href="/css/signin.css">
@@ -49,37 +50,43 @@
 
       // Send data using Fetch API (AJAX)
       fetch('/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        // Check if the login is successful
-        if (data.success) {
-          // Store the user ID in localStorage (if successful)
-          localStorage.setItem('userid', data.userid);
-          console.log("User ID stored in localStorage:", localStorage.getItem('userid'));
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+    },
+    body: JSON.stringify({
+        username: username,
+        password: password
+    })
+})
+.then(response => response.json())
+.then(data => {
+    if (data.success) {
+      localStorage.setItem('userid', data.userid);  // Store the user ID in localStorage
 
-          // Redirect to the dashboard
-          window.location.href = '/dashboard';
-        } else {
-          // Display the error message in the error message container
-          let errorMessageContainer = document.getElementById('errorMessage');
-          errorMessageContainer.textContent = data.error || 'Login failed';
-          errorMessageContainer.style.display = 'block'; // Show the error container
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('There was error with the login process.');
-      });
+// Check the usertype and display an alert before redirecting
+if (data.usertype === 'Admin') {
+    alert('Username: ' + data.username + ' - You will be redirected to the dashboard.');
+    window.location.href = '/dashboard';  // Redirect to the dashboard for Admin users
+} else if (data.usertype === 'Standard') {
+    alert('Username: ' + data.username + ' - You will be redirected to the resume page.');
+    window.location.href = '/resume/' + data.username;  // Redirect to the resume page for Standard users
+}
+
+
+
+    } else {
+        document.getElementById('errorMessage').textContent = data.error || 'Login failed';
+        document.getElementById('errorMessage').style.display = 'block';
+    }
+})
+.catch(error => {
+    console.error('Error:', error);
+    alert('There was an error with the login process.');
+});
+
+
     });
   </script>
 </body>

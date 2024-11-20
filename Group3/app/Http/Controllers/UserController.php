@@ -1,40 +1,90 @@
 <?php
 namespace App\Http\Controllers;
-
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
     public function login(Request $request)
-{
-    $credentials = $request->only('username', 'password');
-
-    // Log the login attempt
-    \Log::info('Login attempt for username: ' . $credentials['username']);
-
-    // Fetch user from database (Ensure the password is stored in plain text or another method)
-    $user = DB::table('users')->where('username', $credentials['username'])->first();
-
-    // Check if user exists and password matches
-    if ($user && $user->password === $credentials['password']) {
-        session(['user_id' => $user->userid]); // Store user ID in session
-
+    {
+        // Retrieve the credentials from the request
+        $credentials = $request->only('username', 'password');
+    
+        // Log the login attempt
+        \Log::info('Login attempt for username: ' . $credentials['username']);
+    
+        // Fetch the user from the database
+        $user = DB::table('users')->where('username', $credentials['username'])->first();
+    
+        // Check if user exists and if the password matches
+        if ($user) {
+            \Log::info('User found with username: ' . $credentials['username'] . ', Usertype: ' . $user->usertype);
+    
+            // Check if password matches
+            if ($user->password === $credentials['password']) {
+                session(['user_id' => $user->userid]); // Store user ID in session
+    
+                // Log success message
+                \Log::info('Login successful for username: ' . $credentials['username']);
+                
+                // Check usertype and log access to the respective page
+                if ($user->usertype === 'Admin') {
+                    \Log::info('Usertype is Admin. Accessing the dashboard.');
+                    return response()->json([
+                        'success' => true,
+                        'userid' => $user->userid,  // Send the user ID back in the response
+                        'username' => $user->username,  // Send the username as well
+                        'usertype' => $user->usertype,
+                        'message' => 'Login successful! Redirect to dashboard.',
+                    ]);
+                }
+    
+                if ($user->usertype === 'Standard') {
+                    \Log::info('Usertype is Standard. Accessing the resume page.');
+                    return response()->json([
+                        'success' => true,
+                        'userid' => $user->userid,
+                        'username' => $user->username,
+                        'usertype' => $user->usertype,
+                        'message' => 'Login successful! Redirect to resume page.',
+                    ]);
+                }
+            } else {
+                \Log::warning('Login failed: Incorrect password for username: ' . $credentials['username']);
+            }
+        } else {
+            \Log::warning('Login failed: User not found for username: ' . $credentials['username']);
+        }
+    
+        // Return error response if login fails
         return response()->json([
-            'success' => true,
-            'userid' => $user->userid,  // Return the user ID here
-            'message' => 'Login successful!'
+            'success' => false,
+            'error' => 'Invalid credentials',
         ]);
     }
+    
+    
 
-    // If login fails, return with error message
-    return response()->json([
-        'success' => false,
-        'error' => 'Invalid credentials'
-    ]);
-}
 
-    public function showDashboard()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+public function showDashboard()
     {
         // Fetching all data from the users table without any restrictions
         $admins = DB::table('users')
@@ -45,6 +95,9 @@ class UserController extends Controller
         // Passing data to the view
         return view('dashboard', compact('admins'));
     }
+
+
+
 
  public function getUser($userid)
 {
@@ -137,26 +190,6 @@ class UserController extends Controller
     return response()->json(['error' => 'User not found'], 404);
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 public function updateUser(Request $request)
 {
     // Validate incoming request
@@ -165,9 +198,9 @@ public function updateUser(Request $request)
         'fullname' => 'required|string|max:255',
         'address' => 'nullable|string|max:255',
         'birthdate' => 'nullable|string|max:255',
-        'phone' => 'nullable|string|max:11',
-        'email' => 'nullable|string|email|max:255',
-        'objective' => 'nullable|string|max:255',
+        'phone' => 'nullable|string',
+        'email' => 'nullable|string|max:255',
+        'objective' => 'nullable|string',
         'professional_skills' => 'nullable|array',
         'certifications' => 'nullable|array',
         'skills' => 'nullable|array',
@@ -220,11 +253,6 @@ public function updateUser(Request $request)
     return response()->json(['success' => false, 'message' => 'User not found']);
 }
 
-
-    
-
-
-
     public function getUserPicture($userid)
 {
     // Fetch user data from the users table
@@ -242,8 +270,6 @@ public function updateUser(Request $request)
         'picture' => asset('images/default_icon.png')
     ]);
 }
-
-
 
 public function updateUserPicture(Request $request)
 {
@@ -275,13 +301,16 @@ public function updateUserPicture(Request $request)
         // Store the image in the "public/images/users" directory
         $file->move(public_path('images/users'), $fileName);
 
-        // Update the user's picture in the database with only the filename
+        // Now update the user's picture in the database with only the filename
         DB::table('users')
             ->where('userid', $userId)
             ->update(['picture' => $fileName]);
 
-        // Return a success response
-        return response()->json(['success' => true, 'picture' => asset('images/users/' . $fileName)]);
+        // Return a success response with the picture URL
+        return response()->json([
+            'success' => true,
+            'pictureUrl' => asset('images/users/' . $fileName) // Send the full URL back to the frontend
+        ]);
     } catch (\Exception $e) {
         // Log the exception message for debugging
         \Log::error('Error updating user picture: ', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
@@ -290,7 +319,90 @@ public function updateUserPicture(Request $request)
     }
 }
 
+public function updateUserStatus(Request $request)
+{
+    try {
+        // Validate the request data
+        $request->validate([
+            'userid' => 'required|exists:users,userid', // Ensure userid exists in users table
+            'status' => 'required|string|in:N/A,Received,Reviewed,Referred,Selected,Hired', // Validate status
+        ]);
 
+        // Get the user ID and new status
+        $userId = $request->input('userid');
+        $status = $request->input('status');
+
+        // Update the status in the database
+        DB::table('users')
+            ->where('userid', $userId)
+            ->update(['status' => $status]);
+
+        // Return a success response
+        return response()->json([
+            'success' => true,
+            'message' => 'Status updated successfully!',
+        ]);
+    } catch (\Exception $e) {
+        // Log the error for debugging
+        \Log::error('Error updating user status: ' . $e->getMessage());
+
+        // Return an error response
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while updating the status. Please try again.',
+        ], 500);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+public function viewResume($username)
+{
+    // Fetch the user based on the username, join with the 'resume' table
+    $user = DB::table('users')
+        ->leftJoin('resume', 'users.userid', '=', 'resume.userid')  // Join with 'resume' table on 'userid'
+        ->where('users.username', $username)  // Filter by username
+        ->select('users.*', 'resume.*')  // Select all columns from both tables
+        ->first();  // Get the first result (should be a unique user)
+
+    // If the user does not exist, return a 404 error
+    if (!$user) {
+        abort(404, 'User not found');
+    }
+
+    // Pass the user data to the view
+    return view('view_resume', ['admin' => $user]);
+}
 
 
 

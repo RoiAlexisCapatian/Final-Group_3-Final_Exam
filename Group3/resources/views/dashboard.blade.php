@@ -7,6 +7,7 @@
     
     <link rel="icon" href="/bag.ico" type="image/x-icon">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <!-- <script src="/js/script.js')"></script> -->
     <title>Dashboard</title>
 </head>
 <body>
@@ -31,11 +32,20 @@
                 <tr class="resume_row">
                     <td class="userid_td">{{ $admin->userid }}</td>
                     <td class="picture_td">
-                    <img src="{{ asset($admin->picture ? 'images/users/' . $admin->picture : 'images/default_icon.png') }}" alt="user image" width="50px" height="50px">
+                    <img id="table_profile_{{ $admin->userid }}" src="{{ asset($admin->picture ? 'images/users/' . $admin->picture : 'images/default_icon.png') }}" alt="user image" width="50px" height="50px">
                     </td>
                     <td class="username_td">{{ $admin->username ?? 'N/A' }}</td>
                     <td class="usertype_td">{{ $admin->usertype }}</td>
-                    <td class="status_td">{{ $admin->status ?? 'N/A' }}</td>
+                    <td class="status_td" id="status_td_{{ $admin->userid }}">
+                        <select id="status_select_{{ $admin->userid }}" name="status">
+                            <option value="N/A" {{ $admin->status == 'N/A' ? 'selected' : '' }}>N/A</option>
+                            <option value="Received" {{ $admin->status == 'Received' ? 'selected' : '' }}>Received</option>
+                            <option value="Reviewed" {{ $admin->status == 'Reviewed' ? 'selected' : '' }}>Reviewed</option>
+                            <option value="Referred" {{ $admin->status == 'Referred' ? 'selected' : '' }}>Referred</option>
+                            <option value="Selected" {{ $admin->status == 'Selected' ? 'selected' : '' }}>Selected</option>
+                            <option value="Hired" {{ $admin->status == 'Hired' ? 'selected' : '' }}>Hired</option>
+                        </select>
+                    </td>
                     <td class="action_td">
                         <button class="view-button" onclick="showModal('{{ $admin->userid }}')">View</button>
                     </td>
@@ -147,7 +157,8 @@
     // Function to send the file to the server
     async function updateUserPicture(fileInput) {
     const formData = new FormData();
-    formData.append('userid', document.getElementById('userid').value); // Get the actual user ID from the hidden input field
+    const userid = document.getElementById('userid').value; // Get the user ID from the hidden input field
+    formData.append('userid', userid); // Append the user ID
     formData.append('picture', fileInput.files[0]); // Append the selected file
 
     try {
@@ -161,18 +172,36 @@
 
         if (response.ok) {
             const result = await response.json();
-            console.log('Picture updated successfully:', result);
-            alert('Picture updated successfully!');
+            console.log('Server response:', result);  // Check the response
+
+            const pictureUrl = result.pictureUrl;  // Assuming the server returns the new picture's URL
+
+            // Check if the image URL is valid
+            if (pictureUrl) {
+                // Dynamically update the profile image by user ID
+                const profileImage = document.getElementById('table_profile_' + userid);
+                if (profileImage) {
+                    console.log('The table_profile_id matches the selected userid! Updating picture...');
+                    profileImage.src = pictureUrl; // Update the image source dynamically
+                } else {
+                    console.error('Profile image not found for user ID:', userid);
+                }
+
+                alert('Picture updated successfully!');
+            } else {
+                alert('Failed to get picture URL.');
+            }
         } else {
             const result = await response.json();
             console.error('Failed to update picture:', result.message);
-            alert('Failed to update picture. Please try again. The user ID received: ' + result.userId);
+            alert('Failed to update picture. Please try again.');
         }
     } catch (error) {
         console.error('Error updating picture:', error);
         alert('An error occurred. Please try again.');
     }
 }
+
 
 
     // Attach the change event to the file input
@@ -188,8 +217,8 @@
             <br>
             <h3 class="header3 margin">CONTACT</h3>
             <span class="contact bold">Address:&nbsp;&nbsp;<p id="address" contenteditable="false" style="white-space: nowrap;"></p></span>
-            <span class="contact bold">Address:&nbsp;&nbsp;<p id="birthdate" contenteditable="false" style="white-space: nowrap;"></p></span>
-            <span class="contact bold">Phone:&nbsp;&nbsp;<p id="phone" contenteditable="false" stle="white-space: nowrap;margin: 0;"></p></span>
+            <span class="contact bold">Birthdate:&nbsp;&nbsp;<p id="birthdate" contenteditable="false" style="white-space: nowrap;"></p></span>
+            <span class="contact bold">Phone:&nbsp;&nbsp;<p id="phone"  contenteditable="false" stle="white-space: nowrap;margin: 0;"></p></span>
             <span class="contact bold">Email:&nbsp;&nbsp;<p id="email" contenteditable="false" style="white-space: nowrap;margin: 0;"></p></span>
             <div style="width: 100%;  border: 1px solid;"></div>
             <h3 class="header3 margin">SKILLS</h3>
@@ -272,8 +301,8 @@
                 // Populate the contact details (address, birthdate, phone, email)
                 addressElement.textContent = `${data.address || 'Not provided'}`;
                 birthdateElement.textContent = `${data.birthdate || 'Not provided'}`;
-                phoneElement.textContent = `${data.phone || 'Not provided'}`;
-                emailElement.textContent = `${data.email || 'Not provided'}`;
+                phoneElement.textContent = `${data.phone || '9123456789'}`;
+                emailElement.textContent = `${data.email || 'example@gmail.com'}`;
 
                 // console.log(`Professional skills for userid ${userid}:`, data.professional_skills);
                 professionalSkillsContainer.innerHTML = '';
@@ -357,6 +386,13 @@
 function enableEdit() {
     const saveButton = document.getElementById('saveButton');
     saveButton.disabled = false; // Enable the save button when edit starts
+    const outputMessage = document.getElementById('output_message'); // Assuming there's an element with this ID for output messages
+    // Clear the output message content
+    if (outputMessage) {
+        outputMessage.textContent = ''; // Clear the text content of the output message element
+        outputMessage.style.display='none';
+    }
+
 
     editFields();
     editObjective();
@@ -365,7 +401,6 @@ function enableEdit() {
     editSkills();
     editEducation();
     editWorkHistory();
-    editCamera();
 
     // Disable the edit button to prevent multiple activations
     const editButton = document.querySelector('.edit-button');
@@ -391,7 +426,22 @@ function editFields() {
         if (element) {
             element.contentEditable = true; // Allow editing
             element.style.border = '1px solid #ccc'; // Visual indication for edit mode
+            
             element.focus(); // Focus the field for convenience
+    
+            
+            if (element === phoneElement) {
+    // Remove non-numeric characters and allow free input
+    element.addEventListener('input', function(event) {
+        // Only allow digits
+        element.textContent = element.textContent.replace(/[^0-9]/g, '');
+
+        // Ensure left-to-right text direction
+        element.style.direction = 'ltr';
+        element.style.textAlign = 'left';
+    });
+    
+}
         } else {
             console.error(`Element not found: ${element.id}`);
         }
@@ -971,6 +1021,7 @@ function saveChanges() {
 
     // Handle the response
     xhr.onload = function() {
+        console.log(xhr.responseText);  
         if (xhr.status >= 200 && xhr.status < 300) {
             const response = JSON.parse(xhr.responseText);
             if (response.success) {
@@ -1192,6 +1243,7 @@ function closeModal() {
     // Clear the output message content
     if (outputMessage) {
         outputMessage.textContent = ''; // Clear the text content of the output message element
+        outputMessage.style.display='none';
     }
 
     // Reset the contentEditable and borders of elements
@@ -1337,5 +1389,48 @@ window.onclick = function (event) {
     }
 };
     </script>
+
+<script>
+// Attach an event listener to all status select elements
+document.querySelectorAll('[id^="status_select_"]').forEach(selectElement => {
+    selectElement.addEventListener('change', function() {
+        const selectedStatus = this.value;  // Get the selected status
+        const userId = this.id.replace('status_select_', '');  // Extract the user ID from the select ID
+
+        // Log the selected status and user ID
+        console.log(`User ID: ${userId}, Status: ${selectedStatus}`);
+
+        // Show an alert with the user ID and selected status
+        alert(`User ID: ${userId}\nStatus: ${selectedStatus}`);
+
+        // Send the updated status to the server
+        fetch('/update-status', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json', // Ensure the body is sent as JSON
+            },
+            body: JSON.stringify({
+                userid: userId,
+                status: selectedStatus,
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);  // Show success message
+            } else {
+                alert(data.message);  // Show error message
+            }
+        })
+        .catch(error => {
+            console.error('Error updating status:', error);
+            alert('An error occurred. Please try again.');
+        });
+    });
+});
+
+
+</script>
 </body>
 </html>

@@ -226,7 +226,7 @@ main {
 
 .bold{font-weight: bold;text-align: justify;font-size: 13px;}
 
-.col_2 {position: relative;display: flex;grid-column: 2;flex-direction: column;width: auto;margin: 20px 0px 0px 0px;}
+.col_2 {position: relative;display: flex;grid-column: 2;flex-direction: column;width: 300px;margin: 20px 0px 0px 0px;}
 .col_2 contact{position: relative;}
 .col_2 p::before {
     content: "•"; 
