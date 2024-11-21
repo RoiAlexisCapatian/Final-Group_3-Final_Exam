@@ -7,6 +7,7 @@
     
     <link rel="icon" href="/bag.ico" type="image/x-icon">
     <link rel="stylesheet" href="/css/dashboard.css">
+    <!-- <script src="/js/script.js')"></script> -->
     <title>Dashboard</title>
 </head>
 <body>
@@ -35,8 +36,8 @@
                     </td>
                     <td class="username_td">{{ $admin->username ?? 'N/A' }}</td>
                     <td class="usertype_td">{{ $admin->usertype }}</td>
-                    <td class="status_td">
-                        <select id="status_select" name="status">
+                    <td class="status_td" id="status_td_{{ $admin->userid }}">
+                        <select id="status_select_{{ $admin->userid }}" name="status">
                             <option value="N/A" {{ $admin->status == 'N/A' ? 'selected' : '' }}>N/A</option>
                             <option value="Received" {{ $admin->status == 'Received' ? 'selected' : '' }}>Received</option>
                             <option value="Reviewed" {{ $admin->status == 'Reviewed' ? 'selected' : '' }}>Reviewed</option>
@@ -1389,10 +1390,47 @@ window.onclick = function (event) {
 };
     </script>
 
-
 <script>
+// Attach an event listener to all status select elements
+document.querySelectorAll('[id^="status_select_"]').forEach(selectElement => {
+    selectElement.addEventListener('change', function() {
+        const selectedStatus = this.value;  // Get the selected status
+        const userId = this.id.replace('status_select_', '');  // Extract the user ID from the select ID
+
+        // Log the selected status and user ID
+        console.log(`User ID: ${userId}, Status: ${selectedStatus}`);
+
+        // Show an alert with the user ID and selected status
+        alert(`User ID: ${userId}\nStatus: ${selectedStatus}`);
+
+        // Send the updated status to the server
+        fetch('/update-status', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json', // Ensure the body is sent as JSON
+            },
+            body: JSON.stringify({
+                userid: userId,
+                status: selectedStatus,
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);  // Show success message
+            } else {
+                alert(data.message);  // Show error message
+            }
+        })
+        .catch(error => {
+            console.error('Error updating status:', error);
+            alert('An error occurred. Please try again.');
+        });
+    });
+});
+
 
 </script>
-
 </body>
 </html>
